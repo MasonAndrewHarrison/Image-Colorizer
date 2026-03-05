@@ -1,18 +1,18 @@
 import torch
 import numpy as np 
+from skimage.color import lab2rgb
 
-
-def Lab_Dataset():
+class Lab_Dataset():
 
     def __init__(self, train: bool = True):
 
-        self.filename = filename
-        self.transform = transform
+        filename = "dataset/train" if train else "dataset/test"
 
-        filename = "dataset/train" if train else "data/test"
+        ab = np.load(f"{filename}/ab.npy")
+        L = np.load(f"{filename}/L.npy")
 
-        self.ab = np.load(filename + "ab.npy")
-        self.L = np.load(filename + "L.npy")
+        self.ab = torch.tensor(ab, dtype=torch.float32)
+        self.L = torch.tensor(L, dtype=torch.float32)
 
     def __len__(self):
 
@@ -20,7 +20,14 @@ def Lab_Dataset():
 
     def __getitem__(self, idx):
 
-        L = self.L[idx, :, :]
+        L = self.L[idx, :, :].unsqueeze(2)
         ab = self.ab[idx, :, : , :]
-        print(ab.shape, L.shape)
         return (L, ab)
+
+    def rgb_image(self, idx):
+
+        L, ab = self[idx]
+
+        L_ab = torch.cat([L, ab], dim=2).squeeze(0)
+        rgb_image = lab2rgb(L_ab)
+        return rgb_image
