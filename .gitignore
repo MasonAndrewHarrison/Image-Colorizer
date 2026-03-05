@@ -1,3 +1,6 @@
 .venv
 venv/
 dataset/
+temp/
+test.py
+__pycache__

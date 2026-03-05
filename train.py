@@ -1,13 +1,15 @@
 import numpy as np 
 import matplotlib.pyplot as plt
+from skimage.color import lab2rgb
 import torch
+from dataset import Lab_Dataset
+import random
 
 
-gray_image = np.load("dataset/l/gray_scale.npy")
-data = np.load("dataset/ab/ab/ab1.npy")
+dataset = Lab_Dataset()
+L, ab = dataset.__getitem__(0)
 
-img = torch.tensor([data[0, :, :, :]])
-gray_img = torch.tensor([gray_image[0, :, :]]).unsqueeze(3)
-image = torch.cat([gray_img, img], dim=3).squeeze(0)
+L_ab = torch.cat([L, ab], dim=3).squeeze(0)
+image = lab2rgb(L_ab)
 plt.imshow(image)
 plt.show()
