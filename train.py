@@ -6,13 +6,14 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from dataset import Lab_Dataset
 import torch.optim as optim
-from model import Colorizer, initilize_weights
+from model import Colorizer, Discriminator, initilize_weights
 import random
 import time
 
 batch_size = 16
 epochs = 100
 learning_rate = 3e-3
+extra_epochs = 3
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -31,36 +32,58 @@ loader = DataLoader(
     batch_size=batch_size,
 )
 
-model = Colorizer(features=64).to(device)
-initilize_weights(model)
+colorizer = Colorizer(features=32).to(device)
+discriminator = Discriminator(features=32).to(device)
+initilize_weights(discriminator)
+initilize_weights(colorizer)
 
-optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+optim_color = optim.Adam(colorizer.parameters(), lr=learning_rate, betas=(0.9, 0.999))
+optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.9, 0.999))
 
 # TODO use the reduction='none'
 # TODO make it focus on the worse ones in the batch
-critic = nn.HuberLoss(delta=10)
-
+critic = nn.BCELoss()
 
 for epochs in range(epochs):
 
     for i, (L, real_ab) in enumerate(loader):
 
-        optimizer.zero_grad()
+        for i in range(extra_epochs):
 
-        predicted_ab = model(L)
-        print(predicted_ab.min(), predicted_ab.max())
-        loss = critic(predicted_ab, real_ab)
+            optim_disc.zero_grad()
+            predicted_ab = colorizer(L)
+
+            predicted_score = discriminator(L, predicted_ab)
+            predicted_loss = critic(predicted_score, torch.ones_like(predicted_score))
+
+            real_score = discriminator(L, real_ab)
+            real_loss = critic(real_score, torch.ones_like(real_score))
+
+            mixed_loss = real_loss + predicted_loss
+            mixed_loss.backward()
+            optim_disc.step()
+
+
+
+        optim_color.zero_grad()
+
+        predicted_ab = colorizer(L.detach())
+        #print(predicted_ab.min(), predicted_ab.max())
+        score = discriminator(L, predicted_ab)
+        loss = critic(score, torch.ones_like(score))
 
         loss.backward()
-        optimizer.step()
+        optim_color.step()
 
-        total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1)
+        
+
+
         
         #print(f"loss: {loss:.2f}, norm: {total_norm:.2f}")
 
-        if i % 25 == 0:
+        if i % 250 == 0:
 
-            predicted_ab = model(fixed_l).detach()
+            predicted_ab = colorizer(fixed_l).detach()
 
             L_ab = torch.cat([fixed_l, predicted_ab], dim=1).squeeze(0)
             L_ab = L_ab.squeeze(0).permute(1, 2, 0).cpu()

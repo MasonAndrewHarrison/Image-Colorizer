@@ -31,6 +31,7 @@ class Colorizer(nn.Module):
             nn.BatchNorm2d(features*4),
             nn.GELU(),
             nn.ConvTranspose2d(features*4, out_dim, 5, 1, 1, 0),
+            nn.LeakyReLU(),
         )
 
 
@@ -44,7 +45,45 @@ class Colorizer(nn.Module):
         return out
 
 
-    #TODO add a patch discrimitor
+class Discriminator(nn.Module):
+
+    def __init__(self, in_dim: int = 3, features: int = 16):
+        super(Discriminator, self).__init__()
+
+        self.convolution = nn.Sequential(
+            nn.Conv2d(3, features, 5, 1, 2),
+            nn.BatchNorm2d(features),
+            nn.ReLU(),
+            nn.Conv2d(features, features*2, 3, 2, 1),
+            nn.ReLU(),
+            nn.Conv2d(features*2, features*4, 3, 2, 1),
+            nn.ReLU(),
+            nn.Conv2d(features*4, features*8, 3, 2, 1),
+            nn.BatchNorm2d(features*8),
+            nn.ReLU(),
+            nn.Conv2d(features*8, features*16, 3, 2, 1),
+            nn.ReLU(),
+            nn.Conv2d(features*16, features*32, 3, 2, 1),
+            nn.ReLU(),
+        )
+
+        self.shared_mlp = nn.Sequential(
+            nn.Linear(features*32, features*8),
+            nn.ReLU(),
+            nn.Linear(features*8, features),
+            nn.ReLU(),
+            nn.Linear(features, 1),
+            nn.ReLU(),
+        )
+
+    def forward(self, L, ab):
+
+        L_ab = torch.cat([L, ab], dim=1)
+        out = self.convolution(L_ab)
+        out = out.mean(3).mean(2)
+        out = self.shared_mlp(out)
+
+        return out
 
 
 def initilize_weights(model):
@@ -58,13 +97,20 @@ if __name__ == "__main__":
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    image = torch.rand(1, 1, 64, 64).to(device)
+    L = torch.rand(20, 1, 224, 224).to(device)
 
     colorizer = Colorizer(features=32).to(device)
     initilize_weights(colorizer)
 
-    print(image.shape)
+    print(L.shape)
 
-    colored_img = colorizer(image)
+    ab = colorizer(L)
 
-    print(colored_img.shape)
+    discriminator = Discriminator(features=32).to(device)
+
+    print(ab.shape)
+
+    score = discriminator(L, ab)
+
+
+    print(score.shape)
