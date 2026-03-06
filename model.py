@@ -44,6 +44,9 @@ class Colorizer(nn.Module):
         return out
 
 
+    #TODO add a patch discrimitor
+
+
 def initilize_weights(model):
     for m in model.modules():
         if isinstance(m, (nn.Conv2d, nn.ConvTranspose1d)):

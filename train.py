@@ -12,7 +12,7 @@ import time
 
 batch_size = 16
 epochs = 100
-learning_rate = 3e-4
+learning_rate = 3e-3
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -36,6 +36,8 @@ initilize_weights(model)
 
 optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
 
+# TODO use the reduction='none'
+# TODO make it focus on the worse ones in the batch
 critic = nn.HuberLoss(delta=10)
 
 
