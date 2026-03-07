@@ -26,12 +26,12 @@ class Colorizer(nn.Module):
             nn.BatchNorm2d(features*16),
             nn.GELU(),
             nn.ConvTranspose2d(features*16, features*8, 3, 2, 0, 1),
-            nn.GELU(),
+            nn.LeakyReLU(negative_slope=0.15),
             nn.ConvTranspose2d(features*8, features*4, 3, 2, 0, 1),
             nn.BatchNorm2d(features*4),
-            nn.GELU(),
+            nn.LeakyReLU(negative_slope=0.25),
             nn.ConvTranspose2d(features*4, out_dim, 5, 1, 1, 0),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(negative_slope=0.35),
         )
 
 
@@ -73,7 +73,7 @@ class Discriminator(nn.Module):
             nn.Linear(features*8, features),
             nn.ReLU(),
             nn.Linear(features, 1),
-            nn.ReLU(),
+            nn.Sigmoid(),
         )
 
     def forward(self, L, ab):
