@@ -43,6 +43,7 @@ optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5
 # TODO use the reduction='none'
 # TODO make it focus on the worse ones in the batch
 # TODO learn what BCEWithLogitsLoss() does
+
 critic = nn.BCELoss()
 
 for epochs in range(epochs):

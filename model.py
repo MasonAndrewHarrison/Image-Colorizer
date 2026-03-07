@@ -24,7 +24,7 @@ class Colorizer(nn.Module):
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(features*64, features*16, 3, 2, 0, 1),
             nn.BatchNorm2d(features*16),
-            nn.GELU(),
+            nn.LeakyReLU(negative_slope=0.10),
             nn.ConvTranspose2d(features*16, features*8, 3, 2, 0, 1),
             nn.LeakyReLU(negative_slope=0.15),
             nn.ConvTranspose2d(features*8, features*4, 3, 2, 0, 1),
@@ -34,15 +34,85 @@ class Colorizer(nn.Module):
             nn.LeakyReLU(negative_slope=0.35),
         )
 
+        self.conv0 = self._conv_block(in_dim, features, 5, 1, 2)
+        self.conv1 = self._conv_block(features, features*2, 3, 2, 1,)
+        self.conv2 = self._conv_block(features*2, features*4, 3, 2, 1, use_batch_norm=True)
+        self.conv3 = self._conv_block(features*4, features*8, 3, 2, 1)
+        self.conv4 = self._conv_block(features*8, features*16, 3, 2, 1, use_batch_norm=True)
+        self.conv5 = self._conv_block(features*16, features*32, 3, 2, 1)
+
+        self.convT1 = self._conv_tran_block(features*32, features*16, 3, 2)
+        self.convT2 = self._conv_tran_block(2*features*16, features*8, 3, 2, use_batch_norm=True)
+        self.convT3 = self._conv_tran_block(2*features*8, features*4, 3, 2)
+        self.convT4 = self._conv_tran_block(2*features*4, features*2, 3, 2, use_batch_norm=True)
+        self.convT5 = self._conv_tran_block(2*features*2, features, 3, 2)
+
+        self.final_layer = nn.Sequential(
+            nn.ConvTranspose2d(features, out_dim, 5, 1, 2),
+            nn.LeakyReLU(negative_slope=0.25),
+        )
+    
+    @staticmethod
+    def _conv_block(in_features, out_features, kernel, stride, padding, use_batch_norm: bool = False):
+
+        layers = [
+            nn.Conv2d(
+                in_channels=in_features, 
+                out_channels=out_features, 
+                kernel_size=kernel,
+                stride=stride,
+                padding=padding,
+            ),
+        ]
+
+        if use_batch_norm:
+            layers.append(nn.BatchNorm2d(out_features)),
+            layers.append(nn.LeakyReLU(negative_slope=0.05)),
+
+        return nn.Sequential(*layers)
+
+    @staticmethod
+    def _conv_tran_block(in_features, out_features, kernel, stride, use_batch_norm: bool = False):
+
+        layers = [
+            nn.ConvTranspose2d(
+                in_channels=in_features, 
+                out_channels=out_features, 
+                kernel_size=kernel,
+                stride=stride,
+                padding=1,
+                output_padding=1,
+            ),
+        ]
+
+        if use_batch_norm:
+            layers.append(nn.BatchNorm2d(out_features)),
+            layers.append(nn.LeakyReLU(negative_slope=0.20)),
+
+        return nn.Sequential(*layers)
+
+    def cat_skip(self, skip_connect, conv_output):
+
+        return torch.cat([skip_connect, conv_output], dim=1)
 
     def forward(self, x):
 
-        #TODO do a U-net patter later if this works
+        out = self.conv0(x)
+        skip_connect1 = self.conv1(out)
+        skip_connect2 = self.conv2(skip_connect1)
+        skip_connect3 = self.conv3(skip_connect2)
+        skip_connect4 = self.conv4(skip_connect3)
+        latent_space = self.conv5(skip_connect4)
 
-        encoded_latent = self.encoder(x)
-        out = self.decoder(encoded_latent)
+        out = self.convT1(latent_space)
+        out = self.convT2(self.cat_skip(skip_connect4, out))
+        out = self.convT3(self.cat_skip(skip_connect3, out))
+        out = self.convT4(self.cat_skip(skip_connect2, out))
+        out = self.convT5(self.cat_skip(skip_connect1, out))
 
-        return out
+        final = self.final_layer(out)
+
+        return final
 
 
 class Discriminator(nn.Module):
@@ -90,7 +160,9 @@ def initilize_weights(model):
     for m in model.modules():
         if isinstance(m, (nn.Conv2d, nn.ConvTranspose1d)):
             nn.init.normal_(m.weight.data, 0.0, 0.02)
-        #TODO normalize batchnorm
+        elif isinstance(m, nn.BatchNorm2d):
+            nn.init.normal_(m.weight.data, 1.0, 0.02)
+            nn.init.constant(m.bias.data, 0.0)
 
 
 if __name__ == "__main__":
@@ -105,6 +177,8 @@ if __name__ == "__main__":
     print(L.shape)
 
     ab = colorizer(L)
+
+    print(ab.shape)
 
     discriminator = Discriminator(features=32).to(device)
 
