@@ -11,8 +11,8 @@ import random
 import time
 
 batch_size = 8
-epochs = 100
-learning_rate = 5e-5
+epochs = 10000
+learning_rate = 3e-4
 extra_epochs = 3
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -32,8 +32,8 @@ loader = DataLoader(
     batch_size=batch_size,
 )
 
-colorizer = Colorizer(features=32).to(device)
-discriminator = Discriminator(features=32).to(device)
+colorizer = Colorizer(features=64).to(device)
+discriminator = Discriminator(features=64).to(device)
 initilize_weights(discriminator)
 initilize_weights(colorizer)
 
@@ -41,8 +41,9 @@ optim_color = optim.Adam(colorizer.parameters(), lr=learning_rate, betas=(0.5, 0
 optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.99))
 
 # TODO use the reduction='none'
-# TODO make it focus on the worse ones in the batch
-# TODO learn what BCEWithLogitsLoss() does
+# TODO patch gan setup
+# TODO implement SIMM
+# TODO create oklab dataset
 
 critic = nn.BCELoss()
 
@@ -60,7 +61,6 @@ for epochs in range(epochs):
 
             real_score = discriminator(L, real_ab)
             real_loss = critic(real_score, torch.ones_like(real_score))
-            print(real_loss, fake_loss)
 
             mixed_loss = (real_loss + fake_loss)
 
@@ -73,14 +73,22 @@ for epochs in range(epochs):
 
         score = discriminator(L, fake_ab)
         loss = critic(score, torch.ones_like(score))
-        print(loss)
+        f_min = fake_ab.min().item()
+        f_mean = fake_ab.mean().item()
+        f_max = fake_ab.max().item()
+        r_min = real_ab.min().item()
+        r_mean = real_ab.mean().item()
+        r_max = real_ab.max().item()
+
+        if i == 0 and epochs % 1 == 0:
+            print(f"loss {loss} || min {f_min:.1f} ~= {r_min:.1f}, mean {f_mean:.1f} ~= {r_mean:.1f}, max {f_max:.1f} ~= {r_max:.1f}")
 
         colorizer.zero_grad()
         loss.backward()
         optim_color.step()
     
 
-        if i % 200 == 0:
+        if i == 0 and epochs % 30 == 0:
 
             fake_ab = colorizer(fixed_l).detach()
 

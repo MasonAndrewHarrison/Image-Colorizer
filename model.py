@@ -3,10 +3,11 @@ import torch.nn as nn
 
 
 class Colorizer(nn.Module):
-    def __init__(self, in_dim: int = 1, out_dim: int = 2, features: int = 16):
+    def __init__(self, in_dim: int = 1, out_dim: int = 2, features: int = 64, oklab: bool = False):
         super(Colorizer, self).__init__()
 
-        self.out_dim = out_dim
+        self.out_dim = out_dim 
+        self.oklab = oklab
 
         self.encoder = nn.Sequential(
             nn.Conv2d(in_dim, features*4, 5, 1),
@@ -24,14 +25,14 @@ class Colorizer(nn.Module):
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(features*64, features*16, 3, 2, 0, 1),
             nn.BatchNorm2d(features*16),
-            nn.LeakyReLU(negative_slope=0.10),
+            nn.LeakyReLU(negative_slope=0.01),
             nn.ConvTranspose2d(features*16, features*8, 3, 2, 0, 1),
-            nn.LeakyReLU(negative_slope=0.15),
+            nn.LeakyReLU(negative_slope=0.01),
             nn.ConvTranspose2d(features*8, features*4, 3, 2, 0, 1),
             nn.BatchNorm2d(features*4),
-            nn.LeakyReLU(negative_slope=0.25),
+            nn.LeakyReLU(negative_slope=0.03),
             nn.ConvTranspose2d(features*4, out_dim, 5, 1, 1, 0),
-            nn.LeakyReLU(negative_slope=0.35),
+            nn.LeakyReLU(negative_slope=0.05),
         )
 
         self.conv0 = self._conv_block(in_dim, features, 5, 1, 2)
@@ -49,7 +50,7 @@ class Colorizer(nn.Module):
 
         self.final_layer = nn.Sequential(
             nn.ConvTranspose2d(features, out_dim, 5, 1, 2),
-            nn.LeakyReLU(negative_slope=0.25),
+            #nn.Tanh(),
         )
     
     @staticmethod
@@ -112,13 +113,18 @@ class Colorizer(nn.Module):
 
         final = self.final_layer(out)
 
+        if not self.oklab:
+            ...#final = final * 128
+
         return final
 
 
 class Discriminator(nn.Module):
 
-    def __init__(self, in_dim: int = 3, features: int = 16):
+    def __init__(self, in_dim: int = 3, features: int = 16, oklab: bool = False):
         super(Discriminator, self).__init__()
+
+        self.oklab = oklab
 
         self.convolution = nn.Sequential(
             nn.Conv2d(3, features, 5, 1, 2),
@@ -148,6 +154,10 @@ class Discriminator(nn.Module):
 
     def forward(self, L, ab):
 
+        '''if not self.oklab:
+            L = L / 128
+            ab = ab / 128'''
+
         L_ab = torch.cat([L, ab], dim=1)
         out = self.convolution(L_ab)
         out = out.mean(3).mean(2)
@@ -171,7 +181,7 @@ if __name__ == "__main__":
 
     L = torch.rand(20, 1, 224, 224).to(device)
 
-    colorizer = Colorizer(features=32).to(device)
+    colorizer = Colorizer(features=64).to(device)
     initilize_weights(colorizer)
 
     print(L.shape)
@@ -180,7 +190,7 @@ if __name__ == "__main__":
 
     print(ab.shape)
 
-    discriminator = Discriminator(features=32).to(device)
+    discriminator = Discriminator(features=64).to(device)
 
     print(ab.shape)
 

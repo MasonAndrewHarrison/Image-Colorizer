@@ -10,7 +10,7 @@ and is from the MIRFLICKR-25K dataset.
 kaggle.api.authenticate()
 kaggle.api.dataset_download_files("shravankumar9892/image-colorization", path="temp/all/", unzip=True)
 
-test_size = 1000
+test_size = 100
 
 L = (np.load("temp/all/l/gray_scale.npy") / 256) * 100
 
