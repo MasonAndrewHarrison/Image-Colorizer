@@ -42,7 +42,7 @@ optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5
 
 # TODO use the reduction='none'
 # TODO patch gan setup
-# TODO implement SIMM
+# TODO implement SSIM or DeltaE
 # TODO create oklab dataset
 
 critic = nn.BCELoss()
@@ -73,6 +73,7 @@ for epochs in range(epochs):
 
         score = discriminator(L, fake_ab)
         loss = critic(score, torch.ones_like(score))
+
         f_min = fake_ab.min().item()
         f_mean = fake_ab.mean().item()
         f_max = fake_ab.max().item()
@@ -81,7 +82,7 @@ for epochs in range(epochs):
         r_max = real_ab.max().item()
 
         if i == 0 and epochs % 1 == 0:
-            print(f"loss {loss} || min {f_min:.1f} ~= {r_min:.1f}, mean {f_mean:.1f} ~= {r_mean:.1f}, max {f_max:.1f} ~= {r_max:.1f}")
+            print(f"loss {loss:.3f} || min {f_min:.1f} ~= {r_min:.1f}, mean {f_mean:.1f} ~= {r_mean:.1f}, max {f_max:.1f} ~= {r_max:.1f}")
 
         colorizer.zero_grad()
         loss.backward()
