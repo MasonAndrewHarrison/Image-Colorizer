@@ -49,7 +49,7 @@ class Colorizer(nn.Module):
         self.convT5 = self._conv_tran_block(2*features*2, features, 3, 2)
 
         self.final_layer = nn.Sequential(
-            nn.ConvTranspose2d(features, out_dim, 5, 1, 2),
+            nn.ConvTranspose2d(features, out_dim, 5, 1, 2)
         )
     
     @staticmethod
@@ -87,7 +87,7 @@ class Colorizer(nn.Module):
 
         if use_batch_norm:
             layers.append(nn.BatchNorm2d(out_features)),
-            layers.append(nn.LeakyReLU(negative_slope=0.20)),
+            layers.append(nn.ReLU()),
 
         return nn.Sequential(*layers)
 
@@ -103,6 +103,8 @@ class Colorizer(nn.Module):
         skip_connect3 = self.conv3(skip_connect2)
         skip_connect4 = self.conv4(skip_connect3)
         latent_space = self.conv5(skip_connect4)
+        
+        latent_space = 1 - latent_space
 
         out = self.convT1(latent_space)
         out = self.convT2(self.cat_skip(skip_connect4, out))
@@ -128,32 +130,21 @@ class Discriminator(nn.Module):
             nn.ReLU(),
             nn.Conv2d(features, features*2, 3, 2, 1),
             nn.ReLU(),
-            nn.Conv2d(features*2, features*4, 3, 2, 1),
+            nn.Conv2d(features*2, features*4, 5, 1, 2),
             nn.ReLU(),
             nn.Conv2d(features*4, features*8, 3, 2, 1),
             nn.BatchNorm2d(features*8),
             nn.ReLU(),
-            nn.Conv2d(features*8, features*16, 3, 2, 1),
+            nn.Conv2d(features*8, features*16, 5, 1, 2),
             nn.ReLU(),
             nn.Conv2d(features*16, features*32, 3, 2, 1),
             nn.ReLU(),
-        )
-
-        self.shared_mlp = nn.Sequential(
-            nn.Linear(features*32, features*8),
-            nn.ReLU(),
-            nn.Linear(features*8, features),
-            nn.ReLU(),
-            nn.Linear(features, 1),
-            nn.Sigmoid(),
         )
 
     def forward(self, L, ab):
 
         L_ab = torch.cat([L, ab], dim=1)
         out = self.convolution(L_ab)
-        out = out.mean(3).mean(2)
-        out = self.shared_mlp(out)
 
         return out
 

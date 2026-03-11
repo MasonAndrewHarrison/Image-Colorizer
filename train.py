@@ -12,7 +12,7 @@ import time
 
 batch_size = 8
 epochs = 10000
-learning_rate = 3e-4
+learning_rate = 5e-5
 extra_epochs = 5
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -33,19 +33,17 @@ loader = DataLoader(
 )
 
 colorizer = Colorizer(features=64).to(device)
-discriminator = Discriminator(features=64).to(device)
+discriminator = Discriminator(features=32).to(device)
 initilize_weights(discriminator)
 initilize_weights(colorizer)
 
-optim_color = optim.Adam(colorizer.parameters(), lr=learning_rate, betas=(0.5, 0.9))
-optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.9))
+optim_color = optim.Adam(colorizer.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
-# TODO use the reduction='none'
-# TODO patch gan setup
 # TODO implement SSIM or DeltaE
 # TODO create oklab dataset
 
-critic = nn.BCELoss()
+critic = nn.BCEWithLogitsLoss(reduction='mean')
 
 for epochs in range(epochs):
 
@@ -89,7 +87,7 @@ for epochs in range(epochs):
         optim_color.step()
     
 
-        if i == 0 and epochs % 30 == 0:
+        if i == 0 and epochs % 10 == 0:
 
             fake_ab = colorizer(fixed_l).detach()
 
