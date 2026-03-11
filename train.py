@@ -12,7 +12,7 @@ from discriminator import Discriminator
 import random
 import time
 
-batch_size = 8
+batch_size = 16
 epochs = 10000
 learning_rate = 5e-5
 extra_epochs = 5
@@ -102,7 +102,7 @@ for epochs in range(epochs):
         optim_color.step()
     
 
-        if i == 0 and epochs % 10 == 0:
+        if i == 0 and epochs % 150 == 0:
  
             fake_ab = gen(fixed_l).detach()
 

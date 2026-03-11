@@ -9,26 +9,28 @@ class Generator(Colorizer):
 
         self.out_dim = out_dim 
 
-        self.conv0 = self._conv_block(in_dim, features, 5, 1, 2)
-        self.conv1 = self._conv_block(features, features*2, 3, 2, 1,)
-        self.conv2 = self._conv_block(features*2, features*4, 3, 2, 1, use_batch_norm=True)
-        self.conv3 = self._conv_block(features*4, features*8, 3, 2, 1)
-        self.conv4 = self._conv_block(features*8, features*16, 3, 2, 1, use_batch_norm=True)
-        self.conv5 = self._conv_block(features*16, features*32, 3, 2, 1)
+        self.conv0 = self.conv_block(in_dim, features, 5, 1, 2)
+        self.conv1 = self.conv_block(features, features*2, 3, 2, 1,)
+        self.conv2 = self.conv_block(features*2, features*4, 3, 2, 1, use_batch_norm=True)
+        self.conv3 = self.conv_block(features*4, features*8, 3, 2, 1)
+        self.conv4 = self.conv_block(features*8, features*16, 3, 2, 1, use_batch_norm=True)
+        self.conv5 = self.conv_block(features*16, features*32, 3, 2, 1)
 
-        self.convT1 = self._conv_tran_block(features*32, features*16, 3, 2)
-        self.convT2 = self._conv_tran_block(2*features*16, features*8, 3, 2, use_batch_norm=True)
-        self.convT3 = self._conv_tran_block(2*features*8, features*4, 3, 2)
-        self.convT4 = self._conv_tran_block(2*features*4, features*2, 3, 2, use_batch_norm=True)
-        self.convT5 = self._conv_tran_block(2*features*2, features, 3, 2)
+        self.convT1 = self.conv_tran_block(features*32, features*16, 3, 2)
+        self.convT2 = self.conv_tran_block(2*features*16, features*8, 3, 2, use_batch_norm=True)
+        self.convT3 = self.conv_tran_block(2*features*8, features*4, 3, 2)
+        self.convT4 = self.conv_tran_block(2*features*4, features*2, 3, 2, use_batch_norm=True)
+        self.convT5 = self.conv_tran_block(2*features*2, 313, 3, 2)
+
+        self.softmax = nn.Softmax(dim=1)
 
         self.final_layer = nn.Sequential(
-            nn.ConvTranspose2d(features, out_dim, 5, 1, 2)
+            nn.ConvTranspose2d(313, out_dim, 5, 1, 2)
         )
 
-    def forward(self, x):
+    def forward(self, input_l):
 
-        out = self.conv0(x)
+        out = self.conv0(self.normalize_l(input_l))
         skip_connect1 = self.conv1(out)
         skip_connect2 = self.conv2(skip_connect1)
         skip_connect3 = self.conv3(skip_connect2)
@@ -40,8 +42,9 @@ class Generator(Colorizer):
         out = self.convT3(self.cat_skip(skip_connect3, out))
         out = self.convT4(self.cat_skip(skip_connect2, out))
         out = self.convT5(self.cat_skip(skip_connect1, out))
+        out = self.softmax(out)
 
-        final = self.final_layer(out)
+        final = self.unnormalize_ab(self.final_layer(out))
 
         return final
 
