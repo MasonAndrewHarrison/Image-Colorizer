@@ -6,7 +6,9 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from dataset import Lab_Dataset
 import torch.optim as optim
-from model import Colorizer, Discriminator, initilize_weights
+from utils import initilize_weights
+from generator import Generator
+from discriminator import Discriminator
 import random
 import time
 
@@ -23,27 +25,28 @@ dataset = Lab_Dataset(
     device=device,
 )
 
-fixed_l, fixed_ab = dataset[-1]
+fixed_l, fixed_ab = dataset[-11]
 fixed_l.unsqueeze_(0)
-fixed_image = dataset.rgb_image(-1) 
+fixed_image = dataset.rgb_image(-11) 
 
 loader = DataLoader(
     dataset=dataset,
     batch_size=batch_size,
 )
 
-colorizer = Colorizer(features=64).to(device)
-discriminator = Discriminator(features=32).to(device)
-initilize_weights(discriminator)
-initilize_weights(colorizer)
+gen = Generator(features=64).to(device)
+disc = Discriminator(features=32).to(device)
+initilize_weights(disc)
+initilize_weights(gen)
 
-optim_color = optim.Adam(colorizer.parameters(), lr=learning_rate, betas=(0.5, 0.999))
-optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+optim_color = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
 # TODO implement SSIM or DeltaE
 # TODO create oklab dataset
 
 critic = nn.BCEWithLogitsLoss(reduction='mean')
+criterion_l1 = nn.L1Loss()
 
 for epochs in range(epochs):
 
@@ -52,44 +55,56 @@ for epochs in range(epochs):
         for _ in range(extra_epochs):
 
             
-            fake_ab = colorizer(L)
+            fake_ab = gen(L)
 
-            fake_score = discriminator(L, fake_ab.detach())
+            fake_score = disc(L, fake_ab.detach())
             fake_loss = critic(fake_score, torch.zeros_like(fake_score))
 
-            real_score = discriminator(L, real_ab)
+            real_score = disc(L, real_ab)
             real_loss = critic(real_score, torch.ones_like(real_score))
 
             mixed_loss = (real_loss + fake_loss)
 
-            discriminator.zero_grad()
+            disc.zero_grad()
             mixed_loss.backward()
             optim_disc.step()
 
 
-        fake_ab = colorizer(L)
+        fake_ab = gen(L)
 
-        score = discriminator(L, fake_ab)
+        score = disc(L, fake_ab)
         loss = critic(score, torch.ones_like(score))
 
-        f_min = fake_ab.min().item()
-        f_mean = fake_ab.mean().item()
-        f_max = fake_ab.max().item()
-        r_min = real_ab.min().item()
-        r_mean = real_ab.mean().item()
-        r_max = real_ab.max().item()
+        f_min = fake_ab.min()
+        f_mean = fake_ab.mean()
+        f_max = fake_ab.max()
+        r_min = real_ab.min()
+        r_mean = real_ab.mean()
+        r_max = real_ab.max()
+
+        lossL1 = criterion_l1(f_min, r_min) + criterion_l1(f_mean, r_mean) + criterion_l1(f_max, r_max)
+        loss = loss + 3e-4*lossL1
+
+        f_min = f_min.item()
+        f_mean = f_mean.item()
+        f_max = f_max.item()
+        r_min = r_min.item()
+        r_mean = r_mean.item()
+        r_max = r_max.item()
+
+        print(lossL1*3e-4)
 
         if i == 0 and epochs % 1 == 0:
             print(f"loss {loss:.3f} || min {f_min:.1f} ~= {r_min:.1f}, mean {f_mean:.1f} ~= {r_mean:.1f}, max {f_max:.1f} ~= {r_max:.1f}")
-
-        colorizer.zero_grad()
+        
+        gen.zero_grad()
         loss.backward()
         optim_color.step()
     
 
         if i == 0 and epochs % 10 == 0:
-
-            fake_ab = colorizer(fixed_l).detach()
+ 
+            fake_ab = gen(fixed_l).detach()
 
             L_ab = torch.cat([fixed_l, fake_ab], dim=1).squeeze(0)
             L_ab = L_ab.squeeze(0).permute(1, 2, 0).cpu()
