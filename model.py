@@ -50,7 +50,6 @@ class Colorizer(nn.Module):
 
         self.final_layer = nn.Sequential(
             nn.ConvTranspose2d(features, out_dim, 5, 1, 2),
-            #nn.Tanh(),
         )
     
     @staticmethod
@@ -113,9 +112,6 @@ class Colorizer(nn.Module):
 
         final = self.final_layer(out)
 
-        if not self.oklab:
-            ...#final = final * 128
-
         return final
 
 
@@ -154,10 +150,6 @@ class Discriminator(nn.Module):
 
     def forward(self, L, ab):
 
-        '''if not self.oklab:
-            L = L / 128
-            ab = ab / 128'''
-
         L_ab = torch.cat([L, ab], dim=1)
         out = self.convolution(L_ab)
         out = out.mean(3).mean(2)
@@ -170,6 +162,9 @@ def initilize_weights(model):
     for m in model.modules():
         if isinstance(m, (nn.Conv2d, nn.ConvTranspose1d)):
             nn.init.normal_(m.weight.data, 0.0, 0.02)
+            if m.bias is not None:
+                nn.init.constant_(m.bias.data, 0.0)
+
         elif isinstance(m, nn.BatchNorm2d):
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant(m.bias.data, 0.0)

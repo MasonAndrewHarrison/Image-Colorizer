@@ -13,7 +13,7 @@ import time
 batch_size = 8
 epochs = 10000
 learning_rate = 3e-4
-extra_epochs = 3
+extra_epochs = 5
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -37,8 +37,8 @@ discriminator = Discriminator(features=64).to(device)
 initilize_weights(discriminator)
 initilize_weights(colorizer)
 
-optim_color = optim.Adam(colorizer.parameters(), lr=learning_rate, betas=(0.5, 0.99))
-optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.99))
+optim_color = optim.Adam(colorizer.parameters(), lr=learning_rate, betas=(0.5, 0.9))
+optim_disc = optim.Adam(discriminator.parameters(), lr=learning_rate, betas=(0.5, 0.9))
 
 # TODO use the reduction='none'
 # TODO patch gan setup
