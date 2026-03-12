@@ -16,6 +16,7 @@ batch_size = 12
 epochs = 1000
 learning_rate = 1e-4
 extra_epochs = 5
+lambda_color = 1.0
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -42,8 +43,9 @@ initilize_weights(gen)
 optim_color = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
-# TODO implement SSIM or DeltaE
+# TODO implement VGG or DeltaE
 # TODO create oklab dataset
+# TODO create copic dataset
 
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -68,11 +70,24 @@ for epochs in range(epochs):
             mixed_loss.backward()
             optim_disc.step()
 
-
+        #TODO make this create just on output and add logits_to_ab in utils
         fake_ab = gen(L)
+        logits = gen(L, return_logits=True)
 
-        score = disc(L, fake_ab)
-        loss = criterion(score, torch.ones_like(score))
+        scores = disc(L, fake_ab)
+        gan_loss = criterion(scores, torch.ones_like(scores))
+
+        #TODO create ab_to_bins(ab, mode..., gen.pts_in_hull)
+        #TODO create bin_weights_(mode)
+        # loss = -weight[y] * log(softmax(logits)[y])
+        """target_bins = ab_to_bins(real_ab)
+        color_loss = F.cross_entropy(
+            logits,
+            target_bins,
+            weight=bin_weights
+        )"""
+
+        loss = gan_loss + lambda_color * color_loss
         
         gen.zero_grad()
         loss.backward()

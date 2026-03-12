@@ -27,7 +27,7 @@ class Generator(Colorizer):
             nn.ConvTranspose2d(313, self.out_dim, 5, 1, 2)
         )
 
-    def forward(self, input_l):
+    def forward(self, input_l, return_logits: bool = False):
 
         out = self.conv0(self.normalize_l(input_l))
         skip_connect1 = self.conv1(out)
@@ -41,8 +41,11 @@ class Generator(Colorizer):
         out = self.convT3(self.cat_skip(skip_connect3, out))
         out = self.convT4(self.cat_skip(skip_connect2, out))
         out = self.convT5(self.cat_skip(skip_connect1, out))
-        out = self.softmax(out)
 
+        if return_logits:
+            return out
+
+        out = self.softmax(out)
         out = out.permute(0, 2, 3, 1)         
         ab = torch.matmul(out, self.pts_in_hull)    
         ab = ab.permute(0, 3, 1, 2)   
@@ -54,14 +57,14 @@ class Generator(Colorizer):
 if __name__ == "__main__":
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
     L = torch.rand(20, 1, 224, 224).to(device)
 
-    colorizer = Generator(features=64).to(device)
-
+    colorizer = Generator(features=32).to(device)
     print(L.shape)
 
     ab = colorizer(L)
-
     print(ab.shape)
+
+    logits = colorizer(L, return_logits=True)
+    print(logits.shape)
 
