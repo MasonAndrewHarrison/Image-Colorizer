@@ -43,7 +43,9 @@ initilize_weights(gen)
 optim_color = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
-# TODO implement VGG or DeltaE
+# TODO finish cross entropy loss with bins
+# TODO implement DeltaE   ΔE*ab = sqrt( (ΔL*)^2 + (Δa*)^2 + (Δb*)^2 )
+# TODO consider gradient penalies
 # TODO create oklab dataset
 # TODO create copic dataset
 
