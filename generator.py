@@ -4,12 +4,11 @@ from colorizer import Colorizer
 
 
 class Generator(Colorizer):
-    def __init__(self, in_dim: int = 1, out_dim: int = 2, features: int = 64):
-        super(Generator, self).__init__()
-
-        self.out_dim = out_dim 
+    def __init__(self, in_dim: int = 1, features: int = 64, mode: str = 'cielab'):
+        super(Generator, self).__init__(mode=mode) 
 
         self.conv0 = self.conv_block(in_dim, features, 5, 1, 2)
+
         self.conv1 = self.conv_block(features, features*2, 3, 2, 1,)
         self.conv2 = self.conv_block(features*2, features*4, 3, 2, 1, use_batch_norm=True)
         self.conv3 = self.conv_block(features*4, features*8, 3, 2, 1)
@@ -20,12 +19,12 @@ class Generator(Colorizer):
         self.convT2 = self.conv_tran_block(2*features*16, features*8, 3, 2, use_batch_norm=True)
         self.convT3 = self.conv_tran_block(2*features*8, features*4, 3, 2)
         self.convT4 = self.conv_tran_block(2*features*4, features*2, 3, 2, use_batch_norm=True)
-        self.convT5 = self.conv_tran_block(2*features*2, 313, 3, 2)
+        self.convT5 = self.conv_tran_block(2*features*2, self.n_bins, 3, 2)
 
         self.softmax = nn.Softmax(dim=1)
 
         self.final_layer = nn.Sequential(
-            nn.ConvTranspose2d(313, out_dim, 5, 1, 2)
+            nn.ConvTranspose2d(313, self.out_dim, 5, 1, 2)
         )
 
     def forward(self, input_l):

@@ -13,7 +13,7 @@ import random
 import time
 
 batch_size = 16
-epochs = 10000
+epochs = 1000
 learning_rate = 5e-5
 extra_epochs = 5
 
@@ -34,7 +34,7 @@ loader = DataLoader(
     batch_size=batch_size,
 )
 
-gen = Generator(features=64).to(device)
+gen = Generator(features=32).to(device)
 disc = Discriminator(features=32).to(device)
 initilize_weights(disc)
 initilize_weights(gen)
@@ -102,7 +102,7 @@ for epochs in range(epochs):
         optim_color.step()
     
 
-        if i == 0 and epochs % 150 == 0:
+        if i == 0 and epochs % 15 == 0:
  
             fake_ab = gen(fixed_l).detach()
 
