@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import numpy as np
 
 class Colorizer(nn.Module):
     def __init__(self, mode):
@@ -19,13 +19,13 @@ class Colorizer(nn.Module):
             'copic': 3,
         }[mode]
 
-        """pts = {
-            'cielab': nn.load('pts_in_hull_cielab.npy'),
-            'oklab': nn.load('pts_in_hull_oklab.npy'),
-            'copic': nn.load('pts_in_hull_copic.npy'),
+        pts = {
+            'cielab': np.load('third_party/richzhang_colorization/pts_in_hull_cielab.npy'),
+            #'oklab': np.load('pts_in_hull_oklab.npy'),
+            #'copic': np.load('pts_in_hull_copic.npy'),
         }[mode]
         self.register_buffer('pts_in_hull', torch.from_numpy(pts).float())
-        """
+        
         self.center_l = 50
         self.norm_l = 100
         self.norm_ab = 105
@@ -43,7 +43,7 @@ class Colorizer(nn.Module):
         return ab * self.norm_ab
     
     @staticmethod
-    def conv_block(in_features, out_features, kernel, stride, padding, use_batch_norm: bool = False):
+    def conv_block(in_features, out_features, kernel, stride, padding, use_batch_norm: bool = False, dilation: int = 1):
 
         layers = [
             nn.Conv2d(
@@ -52,6 +52,8 @@ class Colorizer(nn.Module):
                 kernel_size=kernel,
                 stride=stride,
                 padding=padding,
+                dilation=dilation,
+                bias=not use_batch_norm,
             ),
         ]
 
@@ -65,7 +67,8 @@ class Colorizer(nn.Module):
                 out_channels=out_features,
                 kernel_size=3,
                 stride=1,
-                padding=1,
+                padding=dilation,
+                dilation=dilation,
             ),
             nn.LeakyReLU(negative_slope=0.05),
         )
@@ -93,7 +96,7 @@ class Colorizer(nn.Module):
             layers.append(nn.BatchNorm2d(in_features))
 
         additional_layers = nn.Sequential(
-            nn.LeakyReLU(),
+            nn.LeakyReLU(negative_slope=0.05),
             nn.ConvTranspose2d(
                 in_channels=in_features,
                 out_channels=out_features,
@@ -101,7 +104,7 @@ class Colorizer(nn.Module):
                 stride=1,
                 padding=1,
             ),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(negative_slope=0.05),
         )
 
         layers.append(additional_layers)

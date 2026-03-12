@@ -12,8 +12,8 @@ class Generator(Colorizer):
         self.conv1 = self.conv_block(features, features*2, 3, 2, 1,)
         self.conv2 = self.conv_block(features*2, features*4, 3, 2, 1, use_batch_norm=True)
         self.conv3 = self.conv_block(features*4, features*8, 3, 2, 1)
-        self.conv4 = self.conv_block(features*8, features*16, 3, 2, 1, use_batch_norm=True)
-        self.conv5 = self.conv_block(features*16, features*32, 3, 2, 1)
+        self.conv4 = self.conv_block(features*8, features*16, 3, 2, 2, use_batch_norm=True, dilation=2)
+        self.conv5 = self.conv_block(features*16, features*32, 3, 2, 2, dilation=2)
 
         self.convT1 = self.conv_tran_block(features*32, features*16, 3, 2)
         self.convT2 = self.conv_tran_block(2*features*16, features*8, 3, 2, use_batch_norm=True)
@@ -43,9 +43,11 @@ class Generator(Colorizer):
         out = self.convT5(self.cat_skip(skip_connect1, out))
         out = self.softmax(out)
 
-        final = self.unnormalize_ab(self.final_layer(out))
+        out = out.permute(0, 2, 3, 1)         
+        ab = torch.matmul(out, self.pts_in_hull)    
+        ab = ab.permute(0, 3, 1, 2)   
 
-        return final
+        return ab
 
 
 

@@ -57,10 +57,23 @@
 
 ---
 
+## Dilated Convolutions
+
+### No Dilation
+- **Status:** Abandoned
+- **Notes:** All encoder layers used standard convolutions with limited receptive field at the bottleneck.
+
+### Dilation on conv5 (dilation=2)
+- **Status:** Current
+- **Notes:** Added dilation=2 to the deepest encoder layer (conv5) with stride=1 and padding=2 to preserve spatial size at the bottleneck (14x14). Expands receptive field without changing spatial dimensions, allowing the network to capture more global context for color decisions. Resulted in a minor improvement in output quality. No size mismatches — architecture works correctly as is.
+
+---
+
 ## Planned Experiments
 
 - [ ] OKLab 256 bin classification with custom kmeans bins
 - [ ] Copic 358 bin classification for stylized colorization
 - [ ] Rebalanced cross entropy loss (Zhang et al. siggraph17) to upweight rare colors
 - [ ] Compare CIELAB vs OKLab vs Copic output quality side by side
-- [ ] Dilated convolutions in deeper encoder layers for larger receptive field
+- [ ] Additional dilation layers (conv4 + conv5) to further expand receptive field
+- [ ] Larger training dataset beyond MIRFLICKR-25K

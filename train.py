@@ -12,9 +12,9 @@ from discriminator import Discriminator
 import random
 import time
 
-batch_size = 16
+batch_size = 12
 epochs = 1000
-learning_rate = 5e-5
+learning_rate = 1e-4
 extra_epochs = 5
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -45,8 +45,7 @@ optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 # TODO implement SSIM or DeltaE
 # TODO create oklab dataset
 
-critic = nn.BCEWithLogitsLoss(reduction='mean')
-criterion_l1 = nn.L1Loss()
+criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
 for epochs in range(epochs):
 
@@ -58,10 +57,10 @@ for epochs in range(epochs):
             fake_ab = gen(L)
 
             fake_score = disc(L, fake_ab.detach())
-            fake_loss = critic(fake_score, torch.zeros_like(fake_score))
+            fake_loss = criterion(fake_score, torch.zeros_like(fake_score))
 
             real_score = disc(L, real_ab)
-            real_loss = critic(real_score, torch.ones_like(real_score))
+            real_loss = criterion(real_score, torch.ones_like(real_score))
 
             mixed_loss = (real_loss + fake_loss)
 
@@ -73,36 +72,14 @@ for epochs in range(epochs):
         fake_ab = gen(L)
 
         score = disc(L, fake_ab)
-        loss = critic(score, torch.ones_like(score))
-
-        f_min = fake_ab.min()
-        f_mean = fake_ab.mean()
-        f_max = fake_ab.max()
-        r_min = real_ab.min()
-        r_mean = real_ab.mean()
-        r_max = real_ab.max()
-
-        lossL1 = criterion_l1(f_min, r_min) + criterion_l1(f_mean, r_mean) + criterion_l1(f_max, r_max)
-        loss = loss + 3e-4*lossL1
-
-        f_min = f_min.item()
-        f_mean = f_mean.item()
-        f_max = f_max.item()
-        r_min = r_min.item()
-        r_mean = r_mean.item()
-        r_max = r_max.item()
-
-        print(lossL1*3e-4)
-
-        if i == 0 and epochs % 1 == 0:
-            print(f"loss {loss:.3f} || min {f_min:.1f} ~= {r_min:.1f}, mean {f_mean:.1f} ~= {r_mean:.1f}, max {f_max:.1f} ~= {r_max:.1f}")
+        loss = criterion(score, torch.ones_like(score))
         
         gen.zero_grad()
         loss.backward()
         optim_color.step()
     
 
-        if i == 0 and epochs % 15 == 0:
+        if i == 0 and epochs % 5 == 0:
  
             fake_ab = gen(fixed_l).detach()
 
