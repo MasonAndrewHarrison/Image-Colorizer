@@ -59,9 +59,3 @@ def ab_to_bins(ab, mode, pts_in_hull, return_bin_index: bool = False):
     return bins_ab
 
 
-if __name__ == "__main__":
-
-
-
-    ...
-
