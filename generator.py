@@ -42,10 +42,13 @@ class Generator(Colorizer):
         out = self.convT4(self.cat_skip(skip_connect2, out))
         out = self.convT5(self.cat_skip(skip_connect1, out))
 
+        
+
         if return_logits:
             return out
 
-        out = self.softmax(out)
+        out = self.softmax(out)    
+        
         out = out.permute(0, 2, 3, 1)         
         ab = torch.matmul(out, self.pts_in_hull)    
         ab = ab.permute(0, 3, 1, 2)   
@@ -66,5 +69,5 @@ if __name__ == "__main__":
     print(ab.shape)
 
     logits = colorizer(L, return_logits=True)
-    print(logits.shape)
+    print(logits)
 
