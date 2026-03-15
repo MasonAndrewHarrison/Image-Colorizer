@@ -17,7 +17,7 @@ batch_size = 12
 epochs = 1000
 learning_rate = 5e-5
 extra_epochs = 1
-lambda_color = 10
+lambda_color = 2
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -80,7 +80,6 @@ for epochs in range(epochs):
         gan_loss = criterion(scores, torch.ones_like(scores))
 
         #TODO create bin_weights_(mode)
-        # loss = -weight[y] * log(softmax(logits)[y])
         target_bins = ab_to_bins(real_ab.detach(), gen.mode, gen.pts_in_hull.detach(), return_bin_index=True)
         color_loss = F.cross_entropy(
             logits,
@@ -88,13 +87,12 @@ for epochs in range(epochs):
             #weight=bin_weights
         )
 
-        loss = color_loss
+        loss = gan_loss + lambda_color * color_loss
         print(loss.item(), color_loss.item(), gan_loss.item())
         
         gen.zero_grad()
         loss.backward()
         optim_color.step()
-    
 
         if i == 0 and epochs % 50 == 0:
  

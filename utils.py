@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from dataset import Lab_Dataset
+
 
 def initilize_weights(model):
     for m in model.modules():
@@ -24,6 +26,8 @@ def logits_to_ab(logits, pts_in_hull):
     return ab
 
 def ab_to_bins(ab, mode, pts_in_hull, return_bin_index: bool = False):
+
+    #TODO make this work with copic
 
     B, C, H, W = ab.shape
     og_pts_in_hull = pts_in_hull.detach()
@@ -55,18 +59,9 @@ def ab_to_bins(ab, mode, pts_in_hull, return_bin_index: bool = False):
     return bins_ab
 
 
-
-
 if __name__ == "__main__":
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    ab = torch.rand(32, 2, 224, 224).to(device) * 128
-    pts_in_hull = np.load('third_party/richzhang_colorization/pts_in_hull_cielab.npy')
-    pts_in_hull = torch.tensor(pts_in_hull, device=device)
-
-    bins = ab_to_bins(ab, 'cielab', pts_in_hull, return_bin_index=True)
-
-    print(bins.shape)
 
 
+    ...
 
