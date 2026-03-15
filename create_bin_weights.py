@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import os
 from dataset import Lab_Dataset
 from torch.utils.data import DataLoader
 from utils import logits_to_ab, ab_to_bins
@@ -43,8 +44,8 @@ for i, (_, ab) in enumerate(loader):
 
 
 total_bin_frequency.div_(total_bin_frequency.sum())
-
-print(total_bin_frequency)
+os.makedirs("Bin-Weights", exist_ok=True)
+torch.save(total_bin_frequency, "Bin-Weights/cielab_weights.pth")
 
 
 

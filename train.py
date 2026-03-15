@@ -41,10 +41,11 @@ disc = Discriminator(features=32).to(device)
 initilize_weights(disc)
 initilize_weights(gen)
 
+bin_weights = torch.load(f"Bin-Weights/{gen.mode}_weights.pth").to(device)
+
 optim_color = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
-# TODO finish cross entropy loss with bins
 # TODO implement DeltaE   ΔE*ab = sqrt( (ΔL*)^2 + (Δa*)^2 + (Δb*)^2 )
 # TODO consider gradient penalies
 # TODO create oklab dataset
@@ -79,12 +80,16 @@ for epochs in range(epochs):
         scores = disc(L, fake_ab)
         gan_loss = criterion(scores, torch.ones_like(scores))
 
-        #TODO create bin_weights_(mode)
-        target_bins = ab_to_bins(real_ab.detach(), gen.mode, gen.pts_in_hull.detach(), return_bin_index=True)
+        target_bins = ab_to_bins(
+            real_ab.detach(), gen.mode, 
+            gen.pts_in_hull.detach(), 
+            return_bin_index=True
+        )
+
         color_loss = F.cross_entropy(
             logits,
             target_bins,
-            #weight=bin_weights
+            weight=bin_weights
         )
 
         loss = gan_loss + lambda_color * color_loss
@@ -95,7 +100,7 @@ for epochs in range(epochs):
         optim_color.step()
 
         if i == 0 and epochs % 50 == 0:
- 
+
             fake_ab = gen(fixed_l).detach()
 
             L_ab = torch.cat([fixed_l, fake_ab], dim=1).squeeze(0)

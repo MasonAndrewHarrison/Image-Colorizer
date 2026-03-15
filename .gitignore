@@ -5,3 +5,5 @@ temp/
 test.py
 __pycache__
 *-Dataset
+*.pth
+*.npy
