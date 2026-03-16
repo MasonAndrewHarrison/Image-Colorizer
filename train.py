@@ -11,14 +11,17 @@ from utils import initilize_weights, logits_to_ab, ab_to_bins
 from generator import Generator
 from discriminator import Discriminator
 import random
+from torch.amp import autocast, GradScaler
 import time
+import os
 
-batch_size = 12
+batch_size = 28
 epochs = 1000
-learning_rate = 5e-4
-extra_epochs = 1
-lambda_color = 10
+learning_rate = 5e-5
+extra_epochs = 3
+lambda_color = 5
 
+os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = Lab_Dataset(
@@ -38,12 +41,16 @@ loader = DataLoader(
 
 gen = Generator(features=32).to(device)
 disc = Discriminator(features=32).to(device)
+
+scaler_gen = GradScaler(device.__str__())
+scaler_disc = GradScaler(device.__str__())
+
 initilize_weights(disc)
 initilize_weights(gen)
 
 bin_weights = torch.load(f"Bin-Weights/{gen.mode}_weights.pth").to(device)
 
-optim_color = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+optim_gen = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
 # TODO implement DeltaE   ΔE*ab = sqrt( (ΔL*)^2 + (Δa*)^2 + (Δb*)^2 )
@@ -53,38 +60,49 @@ optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
-for epochs in range(epochs):
+def disc_step(L, real_ab, extra_epochs: int = extra_epochs):
 
-    for i, (L, real_ab) in enumerate(loader):
+    with torch.no_grad():
+        fake_ab = gen(L) 
 
-        for _ in range(extra_epochs):
+    for _ in range(extra_epochs):
 
-            
-            fake_ab = gen(L)
+        optim_disc.zero_grad()
 
-            fake_score = disc(L, fake_ab.detach())
+        with autocast(device_type=device.__str__(), dtype=torch.float16):
+
+            fake_score = disc(L, fake_ab)
             fake_loss = criterion(fake_score, torch.zeros_like(fake_score))
 
             real_score = disc(L, real_ab)
             real_loss = criterion(real_score, torch.ones_like(real_score))
 
-            mixed_loss = (real_loss + fake_loss)
+        mixed_loss = (real_loss + fake_loss)
 
-            disc.zero_grad()
-            mixed_loss.backward()
-            optim_disc.step()
+        scaler_disc.scale(mixed_loss).backward()
+        scaler_disc.step(optim_disc)
+        scaler_disc.update()
 
+        
+
+def gen_step(L, real_ab):
+
+    optim_gen.zero_grad()
+
+    with autocast(device_type=device.__str__(), dtype=torch.float16):
         logits = gen(L, return_logits=True)
         fake_ab = logits_to_ab(logits, gen.pts_in_hull)
 
         scores = disc(L, fake_ab)
         gan_loss = criterion(scores, torch.ones_like(scores))
 
-        target_bins = ab_to_bins(
-            real_ab.detach(), gen.mode, 
-            gen.pts_in_hull.detach(), 
-            return_bin_index=True
-        )
+        with torch.no_grad():
+            target_bins = ab_to_bins(
+                real_ab.detach(), 
+                gen.mode, 
+                gen.pts_in_hull.detach(), 
+                return_bin_index=True
+            )
 
         color_loss = F.cross_entropy(
             logits,
@@ -92,14 +110,36 @@ for epochs in range(epochs):
             weight=bin_weights
         )
 
-        loss = gan_loss + lambda_color * color_loss
-        print(loss.item(), color_loss.item(), gan_loss.item())
-        
-        gen.zero_grad()
-        loss.backward()
-        optim_color.step()
+    loss = gan_loss + lambda_color * color_loss
 
-        if i == 0 and epochs % 50 == 0:
+    print(loss.item(), color_loss.item(), gan_loss.item())
+    print(
+        f"loss generator: {loss.item():.4f} | "
+        f"VRAM: {torch.cuda.memory_allocated() / 1e9:.2f}GB / "
+        f"{torch.cuda.get_device_properties(0).total_memory / 1e9:.2f}GB"
+    )  
+
+    scaler_gen.scale(loss).backward()
+    scaler_gen.step(optim_gen)
+    scaler_gen.update()
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+print(f"Generator parameters:     {count_parameters(gen):,}")
+print(f"Discriminator parameters: {count_parameters(disc):,}")
+
+
+for epoch in range(epochs):
+
+    for i, (L, real_ab) in enumerate(loader):
+
+        disc_step(L, real_ab)
+        torch.cuda.empty_cache()
+        gen_step(L, real_ab)
+
+        if i == 0 and epoch % 50 == 0:
 
             fake_ab = gen(fixed_l).detach()
 
