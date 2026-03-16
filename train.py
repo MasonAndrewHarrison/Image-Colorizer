@@ -15,9 +15,9 @@ import time
 
 batch_size = 12
 epochs = 1000
-learning_rate = 5e-5
+learning_rate = 5e-4
 extra_epochs = 1
-lambda_color = 2
+lambda_color = 10
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 

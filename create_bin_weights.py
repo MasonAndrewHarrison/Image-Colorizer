@@ -8,15 +8,13 @@ from torch.utils.data import DataLoader
 from utils import logits_to_ab, ab_to_bins
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+epsilon = 1e-5
 
 dataset = Lab_Dataset(
     color_space="CIELAB", 
     train=False,
     device=device,
 )
-
-pts_in_hull = np.load('third_party/richzhang_colorization/pts_in_hull_cielab.npy')
-pts_in_hull = torch.tensor(pts_in_hull)
 
 loader = DataLoader(
     dataset=dataset,
@@ -43,10 +41,8 @@ for i, (_, ab) in enumerate(loader):
     total_bin_frequency.add_(bin_frequency)
 
 
+total_bin_frequency = 1.0 / (total_bin_frequency + epsilon)
 total_bin_frequency.div_(total_bin_frequency.sum())
 os.makedirs("Bin-Weights", exist_ok=True)
 torch.save(total_bin_frequency, "Bin-Weights/cielab_weights.pth")
-
-
-
 
