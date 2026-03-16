@@ -58,4 +58,5 @@ def ab_to_bins(ab, mode, pts_in_hull, return_bin_index: bool = False):
 
     return bins_ab
 
-
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)

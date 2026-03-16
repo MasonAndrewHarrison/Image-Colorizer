@@ -4,21 +4,16 @@ from skimage.color import lab2rgb
 
 class Lab_Dataset():
 
-    def __init__(self, color_space, device, train: bool = True):
+    def __init__(self, color_space, train: bool = True, metadata_mode: str = 'r'):
         """
         color_space is expected it be either "CIELAB" or "OKLAB".
         """
 
-        self.device = device
-
         main_folder = f"{color_space}-Dataset"
         filename = f"{main_folder}/train" if train else f"{main_folder}/test"
 
-        ab = np.load(f"{filename}/ab.npy")
-        L = np.load(f"{filename}/L.npy")
-
-        self.ab = torch.tensor(ab, dtype=torch.float32, device=device) - 128
-        self.L = torch.tensor(L, dtype=torch.float32, device=device)
+        self.ab = np.load(f"{filename}/ab.npy", mmap_mode=metadata_mode)
+        self.L = np.load(f"{filename}/L.npy", mmap_mode=metadata_mode)
 
     def __len__(self):
 
@@ -26,8 +21,16 @@ class Lab_Dataset():
 
     def __getitem__(self, idx):
 
-        L = self.L[idx, :, :].unsqueeze(0)
-        ab = self.ab[idx, :, : , :].permute(2, 0, 1)
+        if isinstance(idx, slice):
+            start, stop, step = idx.indices(len(self.L))
+            idx = list(range(start, stop, step))
+            L = torch.tensor(self.L[idx], dtype=torch.float32).unsqueeze(1)
+            ab = torch.tensor(self.ab[idx], dtype=torch.float32).permute(0, 3, 1, 2)
+            ab.subtract_(128)
+            return (L, ab)
+
+        L = torch.tensor(self.L[idx], dtype=torch.float32).unsqueeze(0)
+        ab = torch.tensor(self.ab[idx], dtype=torch.float32).permute(2, 0, 1)
 
         return (L, ab)
 

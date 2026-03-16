@@ -9,3 +9,4 @@ __pycache__
 *.npy
 *-Dataset/
 Bin-Weights/
+output.png

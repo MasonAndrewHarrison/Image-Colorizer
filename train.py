@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from dataset import Lab_Dataset
 import torch.optim as optim
-from utils import initilize_weights, logits_to_ab, ab_to_bins
+from utils import *
 from generator import Generator
 from discriminator import Discriminator
 import random
@@ -19,24 +19,32 @@ batch_size = 28
 epochs = 1000
 learning_rate = 5e-5
 extra_epochs = 3
-lambda_color = 5
+lambda_color = 10
+render_batch = (5, 5)
 
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = Lab_Dataset(
     color_space="CIELAB", 
-    train=False,
-    device=device,
+    train=True,
+    metadata_mode='r',
 )
 
 fixed_l, fixed_ab = dataset[-11]
+fixed_l = fixed_l.to(device)
+fixed_ab = fixed_ab.to(device)
 fixed_l.unsqueeze_(0)
-fixed_image = dataset.rgb_image(-11) 
+
+fixed_l_batch,_ = dataset[-(render_batch[0] * render_batch[1]):]
+fixed_image = dataset.rgb_image(-11)
+fixed_l_batch = fixed_l_batch.to(device)
 
 loader = DataLoader(
     dataset=dataset,
     batch_size=batch_size,
+    num_workers=4,
+    prefetch_factor=2,
 )
 
 gen = Generator(features=32).to(device)
@@ -83,8 +91,6 @@ def disc_step(L, real_ab, extra_epochs: int = extra_epochs):
         scaler_disc.step(optim_disc)
         scaler_disc.update()
 
-        
-
 def gen_step(L, real_ab):
 
     optim_gen.zero_grad()
@@ -123,40 +129,66 @@ def gen_step(L, real_ab):
     scaler_gen.step(optim_gen)
     scaler_gen.update()
 
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
 print(f"Generator parameters:     {count_parameters(gen):,}")
 print(f"Discriminator parameters: {count_parameters(disc):,}")
-
 
 for epoch in range(epochs):
 
     for i, (L, real_ab) in enumerate(loader):
 
+        L = L.to(device)
+        real_ab = real_ab.to(device)
+
         disc_step(L, real_ab)
         torch.cuda.empty_cache()
         gen_step(L, real_ab)
 
-        if i == 0 and epoch % 50 == 0:
+        if i == 0:
+            gen.eval()
+            fig, axes = plt.subplots(render_batch[0], render_batch[1], figsize=(15, 15))
 
-            fake_ab = gen(fixed_l).detach()
+            with torch.no_grad():
 
-            L_ab = torch.cat([fixed_l, fake_ab], dim=1).squeeze(0)
-            L_ab = L_ab.squeeze(0).permute(1, 2, 0).cpu()
+                print(fixed_l_batch.shape)
+                fake_ab = gen(fixed_l_batch).detach()
+                L_ab = torch.cat([fixed_l_batch, fake_ab], dim=1).squeeze(0)   
+                L_ab = L_ab.squeeze(0).permute(0, 2, 3, 1).cpu()
+                rgb_image = lab2rgb(L_ab)
+                print(rgb_image.shape)
 
-            fig, axes = plt.subplots(1, 2, figsize=(30, 10))
+                for idx, ax in enumerate(axes.flat):
 
-            axes[0].imshow(lab2rgb(L_ab))
-            axes[0].axis("off")
-            axes[0].set_title("AI Colored")
+                    ax.imshow(rgb_image[idx, :, :, :]) 
+                    ax.axis("off")
 
-            axes[1].imshow(fixed_image)
-            axes[1].axis("off")
-            axes[1].set_title("Orginal")
-
+            
             plt.tight_layout()
-            plt.show()
+            plt.savefig("output.png")
+            plt.close()
+            gen.train()
+
+        if i == 0 and epoch % 50 == -1:
+
+            gen.eval()
+            with torch.no_grad():
+
+                fake_ab = gen(fixed_l).detach()
+
+                L_ab = torch.cat([fixed_l, fake_ab], dim=1).squeeze(0)
+                L_ab = L_ab.squeeze(0).permute(1, 2, 0).cpu()
+                rgb_image = lab2rgb(L_ab)
+                fig, axes = plt.subplots(1, 2, figsize=(30, 10))
+
+                axes[0].imshow(rgb_image)
+                axes[0].axis("off")
+                axes[0].set_title("AI Colored")
+
+                axes[1].imshow(fixed_image)
+                axes[1].axis("off")
+                axes[1].set_title("Orginal")
+
+                plt.tight_layout()
+                plt.show()                             
+            gen.train()       
 
 
