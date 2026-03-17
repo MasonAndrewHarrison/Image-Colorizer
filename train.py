@@ -62,7 +62,7 @@ optim_gen = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
 # TODO implement DeltaE   ΔE*ab = sqrt( (ΔL*)^2 + (Δa*)^2 + (Δb*)^2 )
-# TODO consider gradient penalies
+# TODO consider gradient penalies or tvloss
 # TODO create oklab dataset
 # TODO create copic dataset
 
@@ -132,6 +132,8 @@ def gen_step(L, real_ab):
 
 print(f"Generator parameters:     {count_parameters(gen):,}")
 print(f"Discriminator parameters: {count_parameters(disc):,}")
+
+print(bin_weights.min(), bin_weights.max(), bin_weights.mean())
 
 for epoch in range(epochs):
 

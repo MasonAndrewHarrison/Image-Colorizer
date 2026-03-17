@@ -32,6 +32,7 @@ class Lab_Dataset():
 
         L = torch.tensor(self.L[idx], dtype=torch.float32).unsqueeze(0)
         ab = torch.tensor(self.ab[idx], dtype=torch.float32).permute(2, 0, 1)
+        ab.subtract_(128)
 
         return (L, ab)
 
