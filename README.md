@@ -4,6 +4,30 @@
 
 A U-Net based image colorization model that supports multiple color spaces for comparison.
 
+## Steps to Train Network
+
+1. Setup Repo and Venv
+
+2. Install PyTorch:\
+   (For CUDA)`pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128`\
+   (For CPU)`pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu`
+
+3. Install dependencies:\
+   `pip install -r requirements.txt`
+
+4. Setup Dataset and Weight Bins:\
+  `python create_dataset.py`\
+  `python create_bin_weights.py`
+
+5. Train Network:\
+  `python train.py`
+
+## Demo Colorizer Image
+
+> **add later bash to colorize png image** \
+    `download weights from hugging face`
+    `python main --...`
+
 ## Overview
 
 This project implements an automatic image colorization network that takes grayscale images as input and predicts color. The architecture is based on a U-Net with skip connections, supporting three color space modes:
