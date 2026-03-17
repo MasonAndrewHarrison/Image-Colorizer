@@ -12,8 +12,8 @@ epsilon = 1e-5
 
 dataset = Lab_Dataset(
     color_space="CIELAB", 
-    train=False,
-    device=device,
+    train=True,
+    metadata_mode='r',
 )
 
 loader = DataLoader(
@@ -29,7 +29,9 @@ total_bin_frequency = torch.zeros(bin_count, device=device)
 
 for i, (_, ab) in enumerate(loader):
 
+    ab = ab.to(device)
     bins = ab_to_bins(ab, "mode", pts_in_hull, return_bin_index=True)
+    print(f"{i} / {len(loader)}")
 
     B, H, W = bins.shape
     bins = bins.view(B*H*W)

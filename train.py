@@ -1,5 +1,4 @@
 import numpy as np 
-import matplotlib.pyplot as plt
 from skimage.color import lab2rgb
 import torch
 import torch.nn as nn
@@ -14,8 +13,9 @@ import random
 from torch.amp import autocast, GradScaler
 import time
 import os
+import warnings
 
-batch_size = 28
+batch_size = 25
 epochs = 1000
 learning_rate = 5e-5
 extra_epochs = 3
@@ -118,10 +118,11 @@ def gen_step(L, real_ab):
 
     loss = gan_loss + lambda_color * color_loss
 
-    print(loss.item(), color_loss.item(), gan_loss.item())
     print(
-        f"loss generator: {loss.item():.4f} | "
-        f"VRAM: {torch.cuda.memory_allocated() / 1e9:.2f}GB / "
+        f"Mixed Loss: {loss.item():.2f} | "
+        f"Color Loss: {color_loss.item():.2f} | "
+        f"Gan Loss {gan_loss.item():.2f} | "
+        f"VRAM: {torch.cuda.memory_allocated() / 1e9:.2f}GB/"
         f"{torch.cuda.get_device_properties(0).total_memory / 1e9:.2f}GB"
     )  
 
@@ -143,52 +144,11 @@ for epoch in range(epochs):
         torch.cuda.empty_cache()
         gen_step(L, real_ab)
 
-        if i == 0:
-            gen.eval()
-            fig, axes = plt.subplots(render_batch[0], render_batch[1], figsize=(15, 15))
+        if i % 10 == 0:
+            print(f"epoch: {epoch}/{epochs} || idx of: {i}/{len(loader)}")
 
-            with torch.no_grad():
+        if i % 2 == 0:
+            save_images(fixed_l_batch, render_batch=render_batch, gen_mode=gen)
 
-                print(fixed_l_batch.shape)
-                fake_ab = gen(fixed_l_batch).detach()
-                L_ab = torch.cat([fixed_l_batch, fake_ab], dim=1).squeeze(0)   
-                L_ab = L_ab.squeeze(0).permute(0, 2, 3, 1).cpu()
-                rgb_image = lab2rgb(L_ab)
-                print(rgb_image.shape)
-
-                for idx, ax in enumerate(axes.flat):
-
-                    ax.imshow(rgb_image[idx, :, :, :]) 
-                    ax.axis("off")
-
-            
-            plt.tight_layout()
-            plt.savefig("output.png")
-            plt.close()
-            gen.train()
-
-        if i == 0 and epoch % 50 == -1:
-
-            gen.eval()
-            with torch.no_grad():
-
-                fake_ab = gen(fixed_l).detach()
-
-                L_ab = torch.cat([fixed_l, fake_ab], dim=1).squeeze(0)
-                L_ab = L_ab.squeeze(0).permute(1, 2, 0).cpu()
-                rgb_image = lab2rgb(L_ab)
-                fig, axes = plt.subplots(1, 2, figsize=(30, 10))
-
-                axes[0].imshow(rgb_image)
-                axes[0].axis("off")
-                axes[0].set_title("AI Colored")
-
-                axes[1].imshow(fixed_image)
-                axes[1].axis("off")
-                axes[1].set_title("Orginal")
-
-                plt.tight_layout()
-                plt.show()                             
-            gen.train()       
 
 

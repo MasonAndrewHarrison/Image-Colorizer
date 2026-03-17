@@ -1,6 +1,7 @@
 import torch
 import numpy as np 
 from skimage.color import lab2rgb
+import warnings
 
 class Lab_Dataset():
 
@@ -41,5 +42,8 @@ class Lab_Dataset():
         ab = ab.permute(1, 2, 0)
 
         L_ab = torch.cat([L, ab], dim=2).cpu()
-        rgb_image = lab2rgb(L_ab)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            rgb_image = lab2rgb(L_ab)
+
         return rgb_image
