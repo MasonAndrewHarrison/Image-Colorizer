@@ -18,9 +18,9 @@ import warnings
 batch_size = 25
 epochs = 1000
 learning_rate = 5e-5
-extra_epochs = 3
-lambda_color = 10
-render_batch = (5, 5)
+extra_epochs = 2
+lambda_color = 8
+render_batch = (6, 6)
 
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -64,7 +64,7 @@ optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 # TODO implement DeltaE   ΔE*ab = sqrt( (ΔL*)^2 + (Δa*)^2 + (Δb*)^2 )
 # TODO consider gradient penalies or tvloss
 # TODO create oklab dataset
-# TODO create copic dataset
+# TODO use jacobian for the patch gan
 
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
