@@ -34,12 +34,11 @@ This project implements an automatic image colorization network that takes grays
 
 - **CIELAB** — Standard LAB color space using the 313 bin classification from Zhang et al. (ECCV 2016)
 - **OKLab** — Perceptually uniform color space with custom kmeans bins
-- **Copic** — Copic marker palette (358 colors), for stylized colorization
 
 ## Architecture
 
 - U-Net encoder/decoder with skip connections
-- 313/256/358 bin classification output depending on mode
+- 313/256 bin classification output depending on mode
 - Softmax + weighted bin decode instead of direct regression
 
 ## Credits
