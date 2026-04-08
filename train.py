@@ -21,11 +21,12 @@ with open("config.yaml", "r") as f:
 batch_size = config["batch_size"]
 epochs = config["epochs"]
 learning_rate = float(config["learning_rate"])
-extra_epochs = config["extra_epochs"]
 lambda_color = config["lambda_color"]
 render_batch = (6, 6)
 gen_features = config["generator_features"]
 disc_features = config["discriminator_features"]
+gen_update_freq = config["gen_update_freq"]
+disc_update_freq = config["disc_update_freq"]
 
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 device = "cuda" if torch.cuda.is_available() else "cpu"

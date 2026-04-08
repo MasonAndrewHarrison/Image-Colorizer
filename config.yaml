@@ -4,7 +4,8 @@ training:
   batch_size: 25
   epochs: 1000
   learning_rate: 5e-5
-  extra_epochs: 2
+  gen_update_freq: 1
+  disc_update_freq: 1
   lambda_color: 8
   generator_features: 32
   discriminator_features: 32
