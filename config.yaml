@@ -1,13 +1,13 @@
 
 
 training:
-  batch_size: 25
+  batch_size: 26
   epochs: 1000
-  learning_rate: 5e-5
+  learning_rate: 1e-4
   gen_update_freq: 1
   disc_update_freq: 1
   lambda_color: 8
-  generator_features: 32
+  generator_features: 24
   discriminator_features: 32
 
 

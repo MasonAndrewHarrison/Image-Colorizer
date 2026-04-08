@@ -91,3 +91,15 @@ def save_images(fixed_l_batch, render_batch, gen_mode):
     plt.savefig("output.png")
     plt.close()
     gen_mode.train()   
+
+
+def r1_penalty(ab, disc_score):
+
+    grad = torch.autograd.grad(
+        outputs=disc_score.sum(),
+        inputs=ab,
+        create_graph=True
+    )[0]
+    
+    penalty = grad.pow(2).reshape(grad.shape[0], -1).sum(1).mean()
+    return penalty

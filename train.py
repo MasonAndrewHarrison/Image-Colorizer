@@ -68,34 +68,41 @@ optim_gen = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
 # TODO implement DeltaE   ΔE*ab = sqrt( (ΔL*)^2 + (Δa*)^2 + (Δb*)^2 )
-# TODO consider gradient penalies or tvloss
 # TODO create oklab dataset
 # TODO use jacobian for the patch gan
 
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
-def disc_step(L, real_ab, extra_epochs: int = extra_epochs):
 
+
+def disc_fake_step(L):
     with torch.no_grad():
-        fake_ab = gen(L) 
+        fake_ab = gen(L)
+    optim_disc.zero_grad()
+    with autocast(device_type=device.__str__(), dtype=torch.float16):
+        fake_score = disc(L, fake_ab)
+        fake_loss = criterion(fake_score, torch.zeros_like(fake_score))
+    scaler_disc.scale(fake_loss).backward()
+    scaler_disc.step(optim_disc)
+    scaler_disc.update()
 
-    for _ in range(extra_epochs):
+def disc_real_step(L, real_ab):
+    optim_disc.zero_grad()
+    with autocast(device_type=device.__str__(), dtype=torch.float16):
+        real_score = disc(L, real_ab)
+        real_loss = criterion(real_score, torch.ones_like(real_score))
+    scaler_disc.scale(real_loss).backward()
+    scaler_disc.step(optim_disc)
+    scaler_disc.update()
 
-        optim_disc.zero_grad()
-
-        with autocast(device_type=device.__str__(), dtype=torch.float16):
-
-            fake_score = disc(L, fake_ab)
-            fake_loss = criterion(fake_score, torch.zeros_like(fake_score))
-
-            real_score = disc(L, real_ab)
-            real_loss = criterion(real_score, torch.ones_like(real_score))
-
-        mixed_loss = (real_loss + fake_loss)
-
-        scaler_disc.scale(mixed_loss).backward()
-        scaler_disc.step(optim_disc)
-        scaler_disc.update()
+def disc_r1_step(L, real_ab):
+    optim_disc.zero_grad()
+    real_ab_grad = real_ab.detach().requires_grad_(True)
+    real_score = disc(L, real_ab_grad)
+    penalty = r1_penalty(real_ab_grad, real_score)
+    scaler_disc.scale(penalty).backward()
+    scaler_disc.step(optim_disc)
+    scaler_disc.update()
 
 def gen_step(L, real_ab):
 
@@ -122,7 +129,7 @@ def gen_step(L, real_ab):
             weight=bin_weights
         )
 
-    loss = gan_loss + lambda_color * color_loss
+        loss = gan_loss + lambda_color * color_loss
 
     print(
         f"Mixed Loss: {loss.item():.2f} | "
@@ -148,8 +155,10 @@ for epoch in range(epochs):
         L = L.to(device)
         real_ab = real_ab.to(device)
 
-        disc_step(L, real_ab)
-        torch.cuda.empty_cache()
+        disc_fake_step(L)
+        disc_real_step(L, real_ab)
+        if i % 16 == 0:
+            disc_r1_step(L, real_ab)
         gen_step(L, real_ab)
 
         if i % 10 == 0:
