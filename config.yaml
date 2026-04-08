@@ -1,0 +1,19 @@
+
+
+training:
+  batch_size: 25
+  epochs: 1000
+  learning_rate: 5e-5
+  extra_epochs: 2
+  lambda_color: 8
+  generator_features: 32
+  discriminator_features: 32
+
+
+create_bins:
+  epsilon: 1e-5
+  lambda_weight: 0.5
+  batch_size: 64
+
+create_dataset:
+  test_size: 100

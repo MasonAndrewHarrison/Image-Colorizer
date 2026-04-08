@@ -135,10 +135,6 @@ class Generator(Colorizer):
 
         self.softmax = nn.Softmax(dim=1)
 
-        self.final_layer = nn.Sequential(
-            nn.ConvTranspose2d(313, self.out_dim, 5, 1, 2)
-        )
-
     def forward(self, input_l, return_logits: bool = False):
 
         out = self.conv0(self.normalize_l(input_l))

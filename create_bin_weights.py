@@ -5,12 +5,17 @@ import numpy as np
 import os
 from dataset import Lab_Dataset
 from torch.utils.data import DataLoader
-from utils import logits_to_ab, ab_to_bins
+from utils import logits_to_ab, ab_to_bins 
+import yaml
+
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)["create_bins"]
+
+epsilon = float(config["epsilon"])
+lambda_weight = float(config["lambda_weight"])
+batch_size = ["batch_size"]
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-epsilon = 1e-5 
-lambda_weight = 0.5
-batch_size = 64
 
 dataset = Lab_Dataset(
     color_space="CIELAB", 

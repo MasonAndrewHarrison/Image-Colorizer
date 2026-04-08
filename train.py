@@ -11,15 +11,21 @@ from models import Generator, Discriminator
 import random
 from torch.amp import autocast, GradScaler
 import time
+import yaml
 import os
 import warnings
 
-batch_size = 25
-epochs = 1000
-learning_rate = 5e-5
-extra_epochs = 2
-lambda_color = 8
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)["training"]
+
+batch_size = config["batch_size"]
+epochs = config["epochs"]
+learning_rate = float(config["learning_rate"])
+extra_epochs = config["extra_epochs"]
+lambda_color = config["lambda_color"]
 render_batch = (6, 6)
+gen_features = config["generator_features"]
+disc_features = config["discriminator_features"]
 
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -46,8 +52,8 @@ loader = DataLoader(
     prefetch_factor=2,
 )
 
-gen = Generator(features=32).to(device)
-disc = Discriminator(features=32).to(device)
+gen = Generator(features=gen_features).to(device)
+disc = Discriminator(features=disc_features).to(device)
 
 scaler_gen = GradScaler(device.__str__())
 scaler_disc = GradScaler(device.__str__())

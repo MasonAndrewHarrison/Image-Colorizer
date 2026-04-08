@@ -2,6 +2,7 @@ import kaggle
 import numpy as np 
 import os
 import shutil
+import yaml
 
 """
 This uses the CIELAB (Lab) format 
@@ -10,7 +11,11 @@ and is from the MIRFLICKR-25K dataset.
 kaggle.api.authenticate()
 kaggle.api.dataset_download_files("shravankumar9892/image-colorization", path="temp/all/", unzip=True)
 
-test_size = 100
+
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)["create_dataset"]
+
+test_size = config["test_size"]
 
 L = (np.load("temp/all/l/gray_scale.npy") / 256) * 100
 
