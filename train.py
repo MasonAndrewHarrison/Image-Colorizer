@@ -7,8 +7,7 @@ from torch.utils.data import DataLoader
 from dataset import Lab_Dataset
 import torch.optim as optim
 from utils import *
-from generator import Generator
-from discriminator import Discriminator
+from models import Generator, Discriminator
 import random
 from torch.amp import autocast, GradScaler
 import time
