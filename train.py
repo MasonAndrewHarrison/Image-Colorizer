@@ -20,7 +20,8 @@ with open("config.yaml", "r") as f:
 
 batch_size = config["batch_size"]
 epochs = config["epochs"]
-learning_rate = float(config["learning_rate"])
+gen_learning_rate = float(config["gen_learning_rate"])
+disc_learning_rate = float(config["disc_learning_rate"])
 lambda_color = config["lambda_color"]
 render_batch = (6, 6)
 gen_features = config["generator_features"]
@@ -64,12 +65,11 @@ initilize_weights(gen)
 
 bin_weights = torch.load(f"Bin-Weights/{gen.mode}_weights.pth").to(device)
 
-optim_gen = optim.Adam(gen.parameters(), lr=learning_rate, betas=(0.5, 0.999))
-optim_disc = optim.Adam(disc.parameters(), lr=learning_rate, betas=(0.5, 0.999))
+optim_gen = optim.Adam(gen.parameters(), lr=gen_learning_rate, betas=(0.5, 0.999))
+optim_disc = optim.Adam(disc.parameters(), lr=disc_learning_rate, betas=(0.5, 0.999))
 
-# TODO implement DeltaE   ΔE*ab = sqrt( (ΔL*)^2 + (Δa*)^2 + (Δb*)^2 )
+# TODO create better bin weights
 # TODO create oklab dataset
-# TODO use jacobian for the patch gan
 
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
@@ -135,6 +135,7 @@ def gen_step(L, real_ab):
         f"Mixed Loss: {loss.item():.2f} | "
         f"Color Loss: {color_loss.item():.2f} | "
         f"Gan Loss {gan_loss.item():.2f} | "
+        f"Fake AB Var: {fake_ab.var().item():.4f} | "
         f"VRAM: {torch.cuda.memory_allocated() / 1e9:.2f}GB/"
         f"{torch.cuda.get_device_properties(0).total_memory / 1e9:.2f}GB"
     )  
@@ -150,21 +151,21 @@ print(bin_weights.min(), bin_weights.max(), bin_weights.mean())
 
 for epoch in range(epochs):
 
-    for i, (L, real_ab) in enumerate(loader):
+    for step, (L, real_ab) in enumerate(loader):
 
         L = L.to(device)
         real_ab = real_ab.to(device)
 
         disc_fake_step(L)
         disc_real_step(L, real_ab)
-        if i % 16 == 0:
+        if step % 16 == 0:
             disc_r1_step(L, real_ab)
         gen_step(L, real_ab)
 
-        if i % 10 == 0:
-            print(f"epoch: {epoch}/{epochs} || idx of: {i}/{len(loader)}")
+        if step % 10 == 0:
+            print(f"epoch: {epoch}/{epochs} || idx of: {step}/{len(loader)}")
 
-        if i % 2 == 0:
+        if step % 2 == 0:
             save_images(fixed_l_batch, render_batch=render_batch, gen_mode=gen)
 
 

@@ -3,16 +3,16 @@
 training:
   batch_size: 26
   epochs: 1000
-  learning_rate: 1e-4
+  gen_learning_rate: 1e-4
+  disc_learning_rate: 1e-5
   gen_update_freq: 1
   disc_update_freq: 1
-  lambda_color: 8
+  lambda_color: 40
   generator_features: 24
   discriminator_features: 32
 
 
 create_bins:
-  epsilon: 1e-5
   lambda_weight: 0.5
   batch_size: 64
 
